@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <inttypes.h>
 #include <time.h>
+#include <Windows.h>
 
 #include "webrtc/modules/audio_device/include/audio_device.h"
 #include "webrtc/common_audio/resampler/include/resampler.h"
@@ -12,6 +13,8 @@
 
 #define SAMPLE_RATE			32000
 #define SAMPLES_PER_10MS	(SAMPLE_RATE/100)
+
+FILE *record_file = NULL;
 
 class ChunkBuffer
 {
@@ -112,12 +115,15 @@ public:
 		clockDrift, currentMicLevel, keyPressed);
 
 		printf("RecordedDataIsAvailable samples:");
-		const size_t *pSample = (const size_t*)audioSamples;
-		for (size_t i = 0; i < nSamples; ++i) {
+
+		/*const size_t *pSample = (const size_t*)audioSamples;
+		for (size_t i = 0; i < nSamples*2; ++i) {
 			printf(" %x", pSample[i]);
-		}
+		}*/
 		printf("\n");
-		
+
+		fwrite(audioSamples, nSamples * 8, 1, record_file);
+		/*
 		int ret;
 		ret = WebRtcVad_Process(vad, samplesPerSec,
 			(int16_t*)audioSamples, nSamples);
@@ -125,7 +131,7 @@ public:
 			return 0;
 		}
 		printf("");
-		/*
+
 		int16_t *samples = (int16_t *)buffer->push();
 		if (samples == NULL) {
 			printf("drop oldest recorded frame");
@@ -247,7 +253,13 @@ public:
 };
 
 int main(int argc, char **argv) {
-	webrtc::AudioDeviceModule *audio;
+	webrtc::AudioDeviceModule *audio = NULL;
+
+	record_file = fopen("recordingdata.pcm", "w");
+	if (!record_file) {
+		fprintf(stderr, "Open file failed!\n");
+		return -1;
+	}
 	audio = webrtc::CreateAudioDeviceModule(0, webrtc::AudioDeviceModule::kPlatformDefaultAudio);
 	assert(audio);
 	audio->Init();
@@ -276,7 +288,7 @@ int main(int argc, char **argv) {
 			printf("	%d %s %s\n", i, name, guid);
 		}
 	}
-
+	/*
 	ret = audio->SetPlayoutDevice(0);
 	ret = audio->SetPlayoutSampleRate(16000);
 	if (ret == -1) {
@@ -285,7 +297,7 @@ int main(int argc, char **argv) {
 		printf("use resampler for playout, device samplerate: %u\n", rate);
 	}
 	ret = audio->InitPlayout();
-
+	*/
 	ret = audio->SetRecordingDevice(0);
 	ret = audio->SetRecordingSampleRate(16000);
 	if (ret == -1) {
@@ -300,12 +312,19 @@ int main(int argc, char **argv) {
 	ret = audio->RegisterAudioCallback(&callback);
 
 	printf("Start playout\n");
-	ret = audio->StartPlayout();
+	//ret = audio->StartPlayout();
 	printf("Start recording\n");
 	ret = audio->StartRecording();
 	printf("End play or recording\n");
 
 	
-	getchar();
+	Sleep(30*1000);
+
+	audio->StopRecording();
+	audio->Terminate();
+
+	fclose(record_file);
+	record_file = NULL;
+
 	return 0;
 }

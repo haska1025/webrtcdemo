@@ -16,56 +16,12 @@
 
 FILE *record_file = NULL;
 
-class ChunkBuffer
-{
-private:
-	int chunk_count;
-	int chunk_size;
-	int used;
-	int first;
-	char *buf;
-
-public:
-	ChunkBuffer(int chunk_count, int chunk_size) {
-		this->chunk_count = chunk_count;
-		this->chunk_size = chunk_size;
-		buf = (char *)malloc(chunk_count * chunk_size);
-		used = 0;
-		first = 0;
-	}
-
-	~ChunkBuffer() {
-		free(buf);
-	}
-
-	// the user of this method must fill the returned chunk of memory,
-	// if buffer is null, NULL is returned.
-	void* push() {
-		if (used >= chunk_count) {
-			return NULL;
-		}
-		int available = (first + used) % chunk_count;
-		used++;
-		return buf + available * chunk_size;
-	}
-
-	void* pop() {
-		if (used <= 0) {
-			return NULL;
-		}
-		void *ret = buf + first * chunk_size;
-		used--;
-		first = ++first % chunk_count;
-		return ret;
-	}
-};
 
 class AudioTransportImpl : public webrtc::AudioTransport
 {
 private:
 	webrtc::Resampler *resampler_in;
 	webrtc::Resampler *resampler_out;
-	ChunkBuffer *buffer;
 	void *aec;
 	VadInst *vad;
 
@@ -73,7 +29,6 @@ public:
 	AudioTransportImpl(webrtc::AudioDeviceModule* audio) {
 		resampler_in = new webrtc::Resampler(48000, SAMPLE_RATE, 2);
 		resampler_out = new webrtc::Resampler(SAMPLE_RATE, 48000, 2);
-		buffer = new ChunkBuffer(10, SAMPLES_PER_10MS * sizeof(int16_t));
 		int ret;
 
 		aec = WebRtcAec_Create();
@@ -90,7 +45,7 @@ public:
 	~AudioTransportImpl() {
 		delete resampler_in;
 		delete resampler_out;
-		delete buffer;
+
 		WebRtcAec_Free(aec);
 		WebRtcVad_Free(vad);
 	}
@@ -122,7 +77,7 @@ public:
 		}*/
 		printf("\n");
 
-		fwrite(audioSamples, nSamples * 8, 1, record_file);
+		fwrite(audioSamples, nSamples * 4, 1, record_file);
 		/*
 		int ret;
 		ret = WebRtcVad_Process(vad, samplesPerSec,
@@ -184,8 +139,12 @@ public:
 		// TODO: multithread lock
 		
 		printf("NeedMorePlayData %d %d %d %d\n", nSamples,
-		nBytesPerSample, nChannels,
+		nBytesPerSample,
+			nChannels,
 		samplesPerSec);
+
+		fread(audioSamples, nSamples * 4, 2, record_file);
+		nSamplesOut = nSamples;
 		
 		/*
 		int16_t *samples = (int16_t *)buffer->pop();
@@ -253,14 +212,24 @@ public:
 };
 
 int main(int argc, char **argv) {
-	webrtc::AudioDeviceModule *audio = NULL;
+	if (argc < 2) {
+		fprintf(stderr, "Need input the param recording(1) or playout(2).\n");
+		return -1;
+	}
 
-	record_file = fopen("recordingdata.pcm", "w");
+	int mode = atoi(argv[1]);
+	if (mode == 2){
+		record_file = fopen("recordingdata.pcm", "r");
+	}
+	else {
+		record_file = fopen("recordingdata.pcm", "w");
+	}
 	if (!record_file) {
 		fprintf(stderr, "Open file failed!\n");
 		return -1;
 	}
-	audio = webrtc::CreateAudioDeviceModule(0, webrtc::AudioDeviceModule::kPlatformDefaultAudio);
+
+	webrtc::AudioDeviceModule *audio = webrtc::CreateAudioDeviceModule(0, webrtc::AudioDeviceModule::kPlatformDefaultAudio);
 	assert(audio);
 	audio->Init();
 
@@ -288,39 +257,46 @@ int main(int argc, char **argv) {
 			printf("	%d %s %s\n", i, name, guid);
 		}
 	}
-	/*
-	ret = audio->SetPlayoutDevice(0);
-	ret = audio->SetPlayoutSampleRate(16000);
-	if (ret == -1) {
-		uint32_t rate = 0;
-		audio->PlayoutSampleRate(&rate);
-		printf("use resampler for playout, device samplerate: %u\n", rate);
-	}
-	ret = audio->InitPlayout();
-	*/
-	ret = audio->SetRecordingDevice(0);
-	ret = audio->SetRecordingSampleRate(16000);
-	if (ret == -1) {
-		uint32_t rate = 0;
-		audio->RecordingSampleRate(&rate);
-		printf("use resampler for recording, device samplerate: %u\n", rate);
-	}
-	ret = audio->InitRecording();
-
-
 	AudioTransportImpl callback(audio);
 	ret = audio->RegisterAudioCallback(&callback);
 
-	printf("Start playout\n");
-	//ret = audio->StartPlayout();
-	printf("Start recording\n");
-	ret = audio->StartRecording();
-	printf("End play or recording\n");
+	if (mode==2) {
+		ret = audio->SetPlayoutDevice(0);
+		ret = audio->SetPlayoutSampleRate(16000);
+		if (ret == -1) {
+			uint32_t rate = 0;
+			audio->PlayoutSampleRate(&rate);
+			printf("use resampler for playout, device samplerate: %u\n", rate);
+		}
+		ret = audio->InitPlayout();
+		printf("Start playout\n");
+		ret = audio->StartPlayout();
+	}
+	else {
+		ret = audio->SetRecordingDevice(0);
+		ret = audio->SetRecordingSampleRate(16000);
+		if (ret == -1) {
+			uint32_t rate = 0;
+			audio->RecordingSampleRate(&rate);
+			printf("use resampler for recording, device samplerate: %u\n", rate);
+		}
+		ret = audio->InitRecording();
+		printf("Start recording\n");
+		ret = audio->StartRecording();
+		
+	}
 
 	
 	Sleep(30*1000);
 
-	audio->StopRecording();
+	printf("End play or recording\n");
+
+	if (mode == 1) {
+		audio->StopRecording();
+	}
+	else {
+		audio->StopPlayout();
+	}
 	audio->Terminate();
 
 	fclose(record_file);

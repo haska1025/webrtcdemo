@@ -69,6 +69,7 @@ void playout()
 
 	// Recording 1 minutes;
 	Sleep(60 * 1000);
+	pVoeFile->StopPlayingFileLocally(audio_channel);
 }
 
 int main(int argc, char *argv[])

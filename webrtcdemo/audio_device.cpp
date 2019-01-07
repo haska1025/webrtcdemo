@@ -1,3 +1,10 @@
+#include <commonlib/utility.h>
+
+#include <webrtc/modules/audio_device/include/audio_device.h>
+#include <webrtc/common_audio/resampler/include/resampler.h>
+#include <webrtc/modules/audio_processing/aec/echo_cancellation.h>
+#include <webrtc/common_audio/vad/include/webrtc_vad.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -5,10 +12,6 @@
 #include <time.h>
 #include <Windows.h>
 
-#include "webrtc/modules/audio_device/include/audio_device.h"
-#include "webrtc/common_audio/resampler/include/resampler.h"
-#include "webrtc/modules/audio_processing/aec/echo_cancellation.h"
-#include "webrtc/common_audio/vad/include/webrtc_vad.h"
 
 
 #define SAMPLE_RATE			32000
@@ -262,24 +265,28 @@ int main(int argc, char **argv) {
 
 	if (mode==2) {
 		ret = audio->SetPlayoutDevice(0);
+		/*
 		ret = audio->SetPlayoutSampleRate(16000);
 		if (ret == -1) {
 			uint32_t rate = 0;
 			audio->PlayoutSampleRate(&rate);
 			printf("use resampler for playout, device samplerate: %u\n", rate);
 		}
+		*/
 		ret = audio->InitPlayout();
 		printf("Start playout\n");
 		ret = audio->StartPlayout();
 	}
 	else {
 		ret = audio->SetRecordingDevice(0);
+		/*
 		ret = audio->SetRecordingSampleRate(16000);
 		if (ret == -1) {
 			uint32_t rate = 0;
 			audio->RecordingSampleRate(&rate);
 			printf("use resampler for recording, device samplerate: %u\n", rate);
 		}
+		*/
 		ret = audio->InitRecording();
 		printf("Start recording\n");
 		ret = audio->StartRecording();
@@ -287,7 +294,7 @@ int main(int argc, char **argv) {
 	}
 
 	
-	Sleep(30*1000);
+	Sleep(20*1000);
 
 	printf("End play or recording\n");
 

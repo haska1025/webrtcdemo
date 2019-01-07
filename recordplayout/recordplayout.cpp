@@ -2,8 +2,11 @@
 #include <webrtc/voice_engine/include/voe_errors.h>
 #include <webrtc/voice_engine/include/voe_file.h>
 #include <webrtc/voice_engine/include/voe_hardware.h>
+#include <webrtc/common_types.h>
+#include <webrtc/modules/audio_coding/include/audio_coding_module.h>
 
-#include<windows.h>
+#include <windows.h>
+
 
 webrtc::VoiceEngine *pVoeEngine = NULL;
 webrtc::VoEBase *pVoeBase = NULL;
@@ -55,10 +58,24 @@ void do_common()
 }
 void recording()
 {
-	pVoeFile->StartRecordingMicrophone("RecordingMicrophone.pcm");
+	webrtc::CodecInst codec;
+	int idx = 4;
+	if (0 != webrtc::AudioCodingModule::Codec(idx, &codec)) {
+		printf("Get codec for index(%d) failed\n", idx);
+		return;
+	}
+	printf("The codec info pltype(%d) plname(%s) plfreq(%d) pacsize(%d) channels(%u) rate(%d)\n",
+		codec.pltype,
+		codec.plname,
+		codec.plfreq,
+		codec.pacsize,
+		codec.channels,
+		codec.rate);
+
+	pVoeFile->StartRecordingMicrophone("RecordingMicrophone.pcm", &codec);
 
 	// Recording 1 minutes;
-	Sleep(60*1000);
+	Sleep(20*1000);
 
 	pVoeFile->StopRecordingMicrophone();
 }
@@ -68,7 +85,7 @@ void playout()
 	pVoeFile->StartPlayingFileLocally(audio_channel, "RecordingMicrophone.pcm");
 
 	// Recording 1 minutes;
-	Sleep(60 * 1000);
+	Sleep(20 * 1000);
 	pVoeFile->StopPlayingFileLocally(audio_channel);
 }
 

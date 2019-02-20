@@ -75,7 +75,7 @@ void recording()
 	pVoeFile->StartRecordingMicrophone("RecordingMicrophone.pcm", &codec);
 
 	// Recording 1 minutes;
-	Sleep(20*1000);
+	Sleep(200*1000);
 
 	pVoeFile->StopRecordingMicrophone();
 }

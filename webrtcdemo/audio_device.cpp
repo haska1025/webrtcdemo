@@ -3,6 +3,7 @@
 #include <webrtc/modules/audio_device/include/audio_device.h>
 #include <webrtc/common_audio/resampler/include/resampler.h>
 #include <webrtc/modules/audio_processing/aec/echo_cancellation.h>
+#include <webrtc/modules/audio_processing/include/audio_processing.h>
 #include <webrtc/common_audio/vad/include/webrtc_vad.h>
 
 #include <stdio.h>
@@ -23,14 +24,16 @@ FILE *record_file = NULL;
 class AudioTransportImpl : public webrtc::AudioTransport
 {
 private:
-	webrtc::Resampler *resampler_in;
+	webrtc::PushResampler<int16_t> resampler_;
 	webrtc::Resampler *resampler_out;
 	void *aec;
 	VadInst *vad;
+	webrtc::AudioFrame dst_frame_;
+
+	webrtc::AudioProcessing *audioproc_ = NULL;
 
 public:
-	AudioTransportImpl(webrtc::AudioDeviceModule* audio) {
-		resampler_in = new webrtc::Resampler(48000, SAMPLE_RATE, 2);
+	AudioTransportImpl(webrtc::AudioDeviceModule* audio) {		
 		resampler_out = new webrtc::Resampler(SAMPLE_RATE, 48000, 2);
 		int ret;
 
@@ -43,10 +46,11 @@ public:
 		assert(vad);
 		ret = WebRtcVad_Init(vad);
 		assert(ret == 0);
+
+		audioproc_ = webrtc::AudioProcessing::Create();
 	}
 
 	~AudioTransportImpl() {
-		delete resampler_in;
 		delete resampler_out;
 
 		WebRtcAec_Free(aec);
@@ -79,8 +83,41 @@ public:
 			printf(" %x", pSample[i]);
 		}*/
 		printf("\n");
+		dst_frame_.sample_rate_hz_ = 16000;
+		dst_frame_.num_channels_ = 1;
+		
+		//newMicLevel = 255;
 
-		fwrite(audioSamples, nSamples * 4, 1, record_file);
+		hskdmo::RemixAndResample((const int16_t*)audioSamples,
+			nSamples,
+			nChannels,
+			samplesPerSec,
+			&resampler_,
+			&dst_frame_);
+
+		if (audioproc_->set_stream_delay_ms(totalDelayMS) != 0) {
+			// Silently ignore this failure to avoid flooding the logs.
+		}
+
+		webrtc::GainControl* agc = audioproc_->gain_control();
+		if (agc->set_stream_analog_level(currentMicLevel) != 0) {
+			assert(false);
+		}
+
+		webrtc::EchoCancellation* aec = audioproc_->echo_cancellation();
+		if (aec->is_drift_compensation_enabled()) {
+			aec->set_stream_drift_samples(clockDrift);
+		}
+
+		audioproc_->set_stream_key_pressed(keyPressed);
+
+		int err = audioproc_->ProcessStream(&dst_frame_);
+		if (err != 0) {
+			assert(false);
+		}
+
+
+		fwrite((int8_t*)dst_frame_.data_, 1, dst_frame_.samples_per_channel_ * 2, record_file);
 		/*
 		int ret;
 		ret = WebRtcVad_Process(vad, samplesPerSec,

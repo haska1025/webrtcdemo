@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25420.1
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.779
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "webrtcdemo", "webrtcdemo\webrtcdemo.vcxproj", "{EB4275DE-AEC6-4302-9B79-9DD34ED67C84}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "commonlib", "commonlib\commonlib.vcxproj", "{A24D8641-106A-4A50-A72E-FFA44F5AF1B4}"
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "peerconnection", "peerconnection\peerconnection.vcxproj", "{1CBE46F5-ACA7-400D-859F-80F310814FA7}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "videocapture", "videocapture\videocapture.vcxproj", "{72A998B1-6096-4A0E-A995-5E63DAA1BE91}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -51,8 +53,19 @@ Global
 		{1CBE46F5-ACA7-400D-859F-80F310814FA7}.Release|x64.Build.0 = Release|x64
 		{1CBE46F5-ACA7-400D-859F-80F310814FA7}.Release|x86.ActiveCfg = Release|Win32
 		{1CBE46F5-ACA7-400D-859F-80F310814FA7}.Release|x86.Build.0 = Release|Win32
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Debug|x64.ActiveCfg = Debug|x64
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Debug|x64.Build.0 = Debug|x64
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Debug|x86.ActiveCfg = Debug|Win32
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Debug|x86.Build.0 = Debug|Win32
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Release|x64.ActiveCfg = Release|x64
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Release|x64.Build.0 = Release|x64
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Release|x86.ActiveCfg = Release|Win32
+		{72A998B1-6096-4A0E-A995-5E63DAA1BE91}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A0E1FB8B-DC10-4E71-B692-A7F1A34931A2}
 	EndGlobalSection
 EndGlobal

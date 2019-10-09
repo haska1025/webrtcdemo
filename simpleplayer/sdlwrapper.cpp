@@ -1,8 +1,9 @@
 #include <stdio.h>
+#include <algorithm>
 
 #include "sdlwrapper.h"
 
-int SDLWrapper::init(int w, int h)
+int SDLWrapper::init(struct init_param *param)
 {
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_TIMER)){
         printf("Init SDL2 failed!\n");
@@ -12,8 +13,8 @@ int SDLWrapper::init(int w, int h)
     window_ = SDL_CreateWindow("Simple palyer by ffmpeg",
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
-            w,
-            h,
+            param->width,
+            param->height,
             SDL_WINDOW_OPENGL);
 
     if (!window_){
@@ -33,8 +34,8 @@ int SDLWrapper::init(int w, int h)
     texture_ = SDL_CreateTexture(render_,
             SDL_PIXELFORMAT_IYUV,
             SDL_TEXTUREACCESS_STREAMING,
-            w,
-            h);
+            param->width,
+            param->height);
 
     if (!texture_){
         printf("SDL Create texture failed.err(%s)\n", SDL_GetError());
@@ -43,17 +44,61 @@ int SDLWrapper::init(int w, int h)
 
     rect_.x = 0;
     rect_.y = 0;
-    rect_.w = w;
-    rect_.h = h;
+    rect_.w = param->width;
+    rect_.h = param->height;
+
+    video_userdata_ = param->video_userdata;
+    video_frame_cb = param->video_cb;
+
+    audio_userdata_ = param->audio_userdata;
+    audio_frame_cb = param->audio_cb;
+
+    if (!audio_frame_cb){
+        printf("You must set audio callback!\n");
+        return -1;
+    }
+
+    // init audio
+    SDL_AudioSpec wanted_spec, spec;
+
+    wanted_spec.freq = param->freq; 
+    wanted_spec.channels = param->channels;
+    wanted_spec.format = AUDIO_S16SYS;
+    wanted_spec.silence = 0;
+    wanted_spec.samples = std::max(512, 2 *( wanted_spec.freq / 30));
+    wanted_spec.callback = sdl_easy_audio_callback;
+    wanted_spec.userdata = this;
+
+    audio_devid_ = SDL_OpenAudioDevice(NULL, 0, &wanted_spec, &spec, SDL_AUDIO_ALLOW_FREQUENCY_CHANGE | SDL_AUDIO_ALLOW_CHANNELS_CHANGE);
+    if (audio_devid_ == 0){
+        printf("Open audio device failed! rc(%d)\n", audio_devid_);
+        return -1;
+    }
+
+    freq_ = spec.freq;
+    channels_ = spec.channels;
+
+    SDL_PauseAudioDevice(audio_devid_, 0);
+
+    printf("Init sdlwrapper success!freq(%d) channels(%d)\n", freq_, channels_);
 
     return 0;
+}
+
+void SDLWrapper::sdl_easy_audio_callback(void *userdata, uint8_t *stream, int len)
+{
+    SDLWrapper *myself = (SDLWrapper*)userdata;
+
+    myself->audio_frame_cb(myself->audio_userdata_, stream, len); 
 }
 
 int SDLWrapper::loop()
 {
     SDL_Event event;
 
-    if (!sdlwrapper_frame_callback){
+    printf("Enter loop......\n");
+
+    if (!video_frame_cb){
         printf("You must set the sdlwrapper frame callback!\n");
         return -1;
     }
@@ -65,7 +110,7 @@ int SDLWrapper::loop()
 
         struct sdlwrapper_frame frame;
 
-        int rc = sdlwrapper_frame_callback(userdata_, &frame); 
+        int rc = video_frame_cb(video_userdata_, &frame); 
         if (rc != 0){
             printf("Get sdlwrapper frame failed! rc(%d)\n", rc);
             break;

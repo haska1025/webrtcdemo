@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+<meta charset="utf-8" />
+<script src="flv.js"></script>
+</head>
+<body>
+
+<video id="flv_file"  controls autoplay>
+You Browser doesn't support video tag
+</video>
+<script>
+    if (flvjs.isSupported()) {
+        var videoElement = document.getElementById('flv_file');
+        var flvPlayer = flvjs.createPlayer({
+            type: 'flv',
+            url: 'http://localhost:8000/live/test.flv'
+        });
+        flvPlayer.attachMediaElement(videoElement);
+        flvPlayer.load();
+        flvPlayer.play();
+    }
+</script>
+
+</body>
+</html>

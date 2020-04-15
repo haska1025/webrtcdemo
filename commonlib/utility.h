@@ -3,8 +3,8 @@
 
 #include <inttypes.h>
 
-#include <webrtc/modules/include/module_common_types.h>
-#include <webrtc/common_audio/resampler/include/push_resampler.h>
+#include <common_audio/resampler/include/push_resampler.h>
+#include <api/audio/audio_frame.h>
 
 namespace hskdmo {
 	void RemixAndResample(const int16_t* src_data,

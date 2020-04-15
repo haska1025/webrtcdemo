@@ -1,5 +1,7 @@
 #include "utility.h"
-#include <webrtc/modules/utility/include/audio_frame_operations.h>
+#include <api/audio/audio_frame.h>
+#include <audio/utility/audio_frame_operations.h>
+#include <assert.h>
 
 namespace hskdmo {
 	void RemixAndResample(const int16_t* src_data,
@@ -15,7 +17,8 @@ namespace hskdmo {
 
 		// Downmix before resampling.
 		if (num_channels == 2 && dst_frame->num_channels_ == 1) {
-			webrtc::AudioFrameOperations::StereoToMono(src_data, samples_per_channel,
+			webrtc::AudioFrameOperations::StereoToMono(src_data,
+                samples_per_channel,
 				mono_audio);
 			audio_ptr = mono_audio;
 			audio_ptr_num_channels = 1;
@@ -27,7 +30,9 @@ namespace hskdmo {
 		}
 
 		const size_t src_length = samples_per_channel * audio_ptr_num_channels;
-		int out_length = resampler->Resample(audio_ptr, src_length, dst_frame->data_,
+		int out_length = resampler->Resample(audio_ptr,
+            src_length,
+            dst_frame->mutable_data(),
 			webrtc::AudioFrame::kMaxDataSizeSamples);
 		if (out_length == -1) {		
 			assert(false);

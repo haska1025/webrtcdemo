@@ -202,59 +202,39 @@ public:
 		int64_t* elapsed_time_ms,
 		int64_t* ntp_time_ms) override
 	{
-		// TODO: multithread lock
-		
+		/*
 		printf("NeedMorePlayData %d %d %d %d\n", nSamples,
 		nBytesPerSample,
 			nChannels,
 		samplesPerSec);
-
-		fread(audioSamples, nSamples * 4, 2, record_file);
-		nSamplesOut = nSamples;
+        */
+        int old_samples_per_channel = 160;
+        int old_channels = 1;
+        int16_t old_samples[161] = { 0 };
+		fread(old_samples, 2, old_samples_per_channel, record_file);
+		//nSamplesOut = nSamples;
 		
 		/*
-		int16_t *samples = (int16_t *)buffer->pop();
-		if (samples == NULL) {
-			printf("no data for playout");
-			int16_t *ptr16Out = (int16_t *)audioSamples;
-			for (int i = 0; i < nSamples; i++) {
-				*ptr16Out = 0; // left
-				ptr16Out++;
-				*ptr16Out = 0; // right (same as left sample)
-				ptr16Out++;
-			}
-			return 0;
-		}
-
-
+		
 		int ret = 0;
 		//ret = WebRtcAec_BufferFarend(aec, samples, SAMPLES_PER_10MS);
 		//assert(ret == 0);
+        */
 
+        dst_frame_.sample_rate_hz_ = samplesPerSec;
+        dst_frame_.num_channels_ = nChannels;
+        hskdmo::RemixAndResample(old_samples,
+            old_samples_per_channel,
+            old_channels,
+            16000,
+            &resampler_,
+            &dst_frame_);
 
-		size_t outLen = 0;
+        nSamplesOut = dst_frame_.samples_per_channel_;
+        memcpy(audioSamples, dst_frame_.data(), nBytesPerSample * nSamplesOut);
+        *elapsed_time_ms = dst_frame_.elapsed_time_ms_;
+        *ntp_time_ms = dst_frame_.ntp_time_ms_;
 
-		int16_t samplesOut[48000];
-		resampler_out->Push(samples,
-			SAMPLES_PER_10MS,
-			samplesOut,
-			nSamples * nBytesPerSample, outLen);
-
-		//log_debug("play %d bytes", outLen * 2);
-
-		int16_t *ptr16Out = (int16_t *)audioSamples;
-		int16_t *ptr16In = samplesOut;
-		// do mono -> stereo
-		for (int i = 0; i < nSamples; i++) {
-			*ptr16Out = *ptr16In; // left
-			ptr16Out++;
-			*ptr16Out = *ptr16In; // right (same as left sample)
-			ptr16Out++;
-			ptr16In++;
-		}
-
-		nSamplesOut = nSamples;
-		*/
 		return 0;
 	}
 
